@@ -1,0 +1,39 @@
+#include <Arduino.h>
+// #include "LedSignal.h"
+// #include "Config.h"
+#include "DeviceManager.h"
+#include "MQTTConnection.h"
+#include "WiFiConnectionManager.h"
+#include "StatusManager.h"
+#include "UserInterfaceManager.h"
+#include "Queue.h"
+#include "MemoryManager.h"
+#define _DB_LOG_
+
+UserInterfaceManager user_interface;
+LedSignal led;
+DeviceManager *devices;
+MemoryManager *memory;
+Queue *queue;
+WiFiMulti wifimul;
+
+String user = "DuyNhat";
+String pass_word = "01684502388";
+String auther = "hello";
+
+void setup() {    
+  devices = DeviceManager::getInstance();
+  devices->initHardware();
+  devices->checkConnectedDevices();
+  devices->initConnectedDevices();
+
+}
+void loop() {
+  ESP_LOGE("heoo","LOGE");
+  ESP_LOGI("heoo","LOGI");
+  log_i("log_i");
+  log_e("log_e");
+  log_d("log_d");
+  delay(1000);
+}
+// use log_e 

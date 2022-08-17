@@ -1,0 +1,13 @@
+mathworks/ThingSpeak @ ^2.0.0
+adafruit/RTClib@^1.12.1
+256dpi/MQTT@^2.5.0
+https://github.com/tzapu/WiFiManager.git
+adafruit/Adafruit NeoPixel@^1.7.0
+marian-craciunescu/ESP32Ping@^1.5
+bodmer/JPEGDecoder@^1.8.1
+adafruit/Adafruit BME280 Library@^2.1.2
+bodmer/TFT_eSPI@^2.3.59
+mathworks/ThingSpeak @ 2.0.0
+fu-hsi/PMS Library@^1.1.0
+bblanchon/ArduinoJson@^6.17.2
+mathworks/ThingSpeak @ ~2.0.0

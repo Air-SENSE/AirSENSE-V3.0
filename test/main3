@@ -1,0 +1,113 @@
+#!/usr/bin/python
+from time import gmtime
+import paho.mqtt.client as mqtt
+import time, random
+import json, datetime
+
+# client, user and device details
+serverUrl   = "mqtt.airsense.vn"
+port        = 1884
+clientId    = f'python-mqtt-{random.randint(0, 1000)}'
+device_name = "device"
+username    = "sparc"
+password    = "sparcXZAairsenseATU"
+# topic       = "/hello"
+
+map = [#39628662418388, 
+    39628662422644,
+    66459239964920,
+    87971958018771,
+    87971959659413,
+    87971959662385,
+    87971959662478,
+    87971959662834,
+    87971959663875,
+    207660635628230,
+    207660635628244,
+    207660635671796,
+    242232433243040,
+    242232439195972,
+    242232439196154,
+    242232439196264,
+    242232439196741,
+    242232439196881,
+    242232439197686,
+    242232439232465,
+    242232439232474,
+    242232439232703,
+    242232439236084,
+    242232439236499,
+    242232439236804,
+    263920670691620
+]
+def LCG(a, c, m, seed):     
+    xi = seed
+    while True:
+        xf = (a * xi + c) % m
+        xi = xf
+        yield xf
+
+def random_sample(n, interval, seed = 20200420162000):
+    lower, upper = interval[0], interval[1]
+    sample = []
+    glibc = LCG(1103515245, 12345, 2 ** 32, seed)       # parameters as in GNU C Library
+
+    for i in range(n):
+        observation = (upper - lower) * (next(glibc) / (2 ** 32 - 1)) + lower
+        sample.append(int(observation))
+
+    return sample
+
+def connect_mqtt():
+    def on_connect(client, userdata, flags, rc):
+        if rc == 0:
+            print("Connected to MQTT Broker!")
+        else:
+            print("Failed to connect, return code %d\n", rc)
+
+    client = mqtt.Client(clientId)
+    client.username_pw_set(username, password)
+    client.on_connect = on_connect
+    client.connect(serverUrl, port)
+    return client
+
+def publish(client):
+    # msg_count = 0
+    while True:
+            # msg = f"messages: {msg_count}"
+        for element in map:
+            msg = ""
+            if datetime.datetime.now().hour > 0 and datetime.datetime.now().hour <= 1 :
+                msg = json.dumps({'StationId' : format(element, 'X'), 'Time' : int(time.time()), 'PM2p5' : random.uniform(25,30),'PM10' : random.uniform(20,40), 'PM1' : random.uniform(20,40),'Temperature': random.uniform(20,25),'Humidity' : random.uniform(80,90),'Pressure' : random.uniform(101800,101900)})
+            elif datetime.datetime.now().hour > 1 and datetime.datetime.now().hour <= 5:
+                msg = json.dumps({'StationId' : format(element, 'X'), 'Time' : int(time.time()), 'PM2p5' : random.uniform(30,50),'PM10' : random.uniform(22,25), 'PM1' : random.uniform(30,40),'Temperature': random.uniform(22,25),'Humidity' : random.uniform(75,90),'Pressure' : random.uniform(101800,101900)})
+            elif datetime.datetime.now().hour > 5 and datetime.datetime.now().hour <= 7:
+                msg = json.dumps({'StationId' : format(element, 'X'), 'Time' : int(time.time()), 'PM2p5' : random.uniform(40,45),'PM10' : random.uniform(35,55), 'PM1' : random.uniform(20,29),'Temperature': random.uniform(20,24),'Humidity' : random.uniform(78,90),'Pressure' : random.uniform(101800,101900)})
+            elif datetime.datetime.now().hour > 7 and datetime.datetime.now().hour <= 11:
+                msg = json.dumps({'StationId' : format(element, 'X'), 'Time' : int(time.time()), 'PM2p5' : random.uniform(30,50),'PM10' : random.uniform(30,60), 'PM1' : random.uniform(20,33),'Temperature': random.uniform(19,25),'Humidity' : random.uniform(74,90),'Pressure' : random.uniform(101800,101900)})
+            elif datetime.datetime.now().hour > 11 and datetime.datetime.now().hour <= 14:
+                msg = json.dumps({'StationId' : format(element, 'X'), 'Time' : int(time.time()), 'PM2p5' : random.uniform(35,60),'PM10' : random.uniform(40,45), 'PM1' : random.uniform(20,36),'Temperature': random.uniform(17,23),'Humidity' : random.uniform(77,90),'Pressure' : random.uniform(101800,101900)})
+            elif datetime.datetime.now().hour > 14 and datetime.datetime.now().hour <= 18:
+                msg = json.dumps({'StationId' : format(element, 'X'), 'Time' : int(time.time()), 'PM2p5' : random.uniform(20,50),'PM10' : random.uniform(30,40), 'PM1' : random.uniform(20,30),'Temperature': random.uniform(18,20),'Humidity' : random.uniform(70,90),'Pressure' : random.uniform(101800,101900)})
+            elif datetime.datetime.now().hour > 18 and datetime.datetime.now().hour <= 23:
+                msg = json.dumps({'StationId' : format(element, 'X'), 'Time' : int(time.time()), 'PM2p5' : random.uniform(20,25),'PM10' : random.uniform(20,30), 'PM1' : random.uniform(20,45),'Temperature': random.uniform(22,25),'Humidity' : random.uniform(88,90),'Pressure' : random.uniform(101800,101900)})
+            # msg = json.dumps({'StationId' : format(element, 'X'), 'Time' : int(time.time()), 'PM2p5' : random.uniform(20,25),'PM10' : random.uniform(20,30), 'PM1' : random.uniform(20,40),'Temperature': random.uniform(20,25),'Humidity' : random.uniform(80,90),'Pressure' : random.uniform(101800,101900)})
+            topic = f"/dummy/{format(element, 'X')}"
+            result = client.publish(topic, msg)
+            # result: [0, 1]
+            status = result[0]
+            if status == 0:
+                print(f"Send `{msg}` to topic `{topic}`")
+            else:
+                print(f"Failed to send message to topic {topic}")
+            # msg_count += 1
+            time.sleep(1)
+        time.sleep(300)
+
+def run():
+    client = connect_mqtt()
+    client.loop_start()
+    publish(client)
+
+if __name__ == '__main__':
+    run()

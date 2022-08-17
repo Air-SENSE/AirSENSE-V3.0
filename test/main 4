@@ -1,0 +1,347 @@
+/**
+ * @file main.c
+ * @author Le Duy Nhat
+ * @brief This main stuff made off 
+ * @date 23/10/2020
+ */
+#include <Arduino.h>
+#include "DeviceManager.h"
+#include "MQTTConnection.h"
+#include "WiFiConnectionManager.h"
+#include "StatusManager.h"
+#include "UserInterfaceManager.h"
+#include "Queue.h"
+#include "MemoryManager.h"
+
+//////////////////////////////////////////////////////////DEFINE////////////////////////////////////////////////////////////////
+#define _DB_LOG_
+#define TIME_TO_RECONNECT_WIFI_DEFAULT  (60000) //one minute
+#define TIME_TO_RECONNECT_WIFI_MAX      (1920000) //32 minutes
+//state
+enum{STATE0, STATE1, STATE2};
+enum{NO_WIFI_AT_START, WIFI_AT_START};
+
+//////////////////////////////////////////////////////GLOBAL VARABLE/////////////////////////////////////////////////////////////
+Config *config;
+UserInterfaceManager user_interface;
+DeviceManager *device_manager;
+Queue *queue;
+MQTTConnection mqtt;
+WiFiConnectionManager wifi_manager;
+
+//Data sum and count data collected
+DataCore data_core_sum;
+uint8_t data_count;
+/**
+ * If there is no Internet connection when first start device, so time to reconnect will be double 
+ * every time WiFi can not be connected and stop at maximun 32 minutes. This value will be reset 
+ * to defaut evey time the devices is connected. This will save enegy in case there is no WiFi around 
+ * in addition to performing display.
+*/
+unsigned long time_to_reconnect_wifi = TIME_TO_RECONNECT_WIFI_DEFAULT;
+
+//static tick
+static unsigned long last_check_update_ota = 0;
+static unsigned long last_reconnect_wifi   = 0;
+static unsigned long last_check_queue      = 0;
+static unsigned long last_switch_state     = 0;
+static unsigned long last_update_from_rtc  = 0;
+//state for FSM
+static uint8_t state = STATE1;
+
+//////////////////////////////////////////////////////////////SET UP////////////////////////////////////////////////////////////////
+void setup() {   
+  //start
+  config = Config::getInstance();
+  device_manager = DeviceManager::getInstance();
+  queue = Queue::getInstance();
+
+  //initialize hardware
+  device_manager->initHardware();
+  //set watchdog timer
+
+  //Show up firmware version
+  #ifdef _DB_LOG_
+    Serial.print(config->getDeviceVersion());
+    Serial.print(" firmware version ");            
+    Serial.println(config->getFirmwareVersion());            
+  #endif
+  //initialize user interface
+  user_interface.init();
+  
+  //check connected device_manager
+  device_manager->checkConnectedDevices();
+  //initialize connected devices
+  device_manager->initConnectedDevices();
+  user_interface.show(PROGRESS_SCREEN);
+
+  delay(2000);
+
+  //Show main screen including data that just collected and clock.
+  user_interface.show(MAIN_SCREEN);
+  device_manager->updateDataCore();
+  user_interface.display.updateData();
+  user_interface.display.updateClock(device_manager->getTime().hour, device_manager->getTime().minute);
+
+  #ifdef _DB_LOG_
+    Serial.println("WiFi mode station");       
+    // Serial.println(WiFi.BSSIDstr());
+    // Serial.println(WiFi.psk());
+  #endif
+  /**
+   * If there is any WiFi data in the SD card, read them all and chose the best WiFi to connect.
+   * Else try to connect old WiFi config
+   * After that, if device is connected to the Internet, that good, well are done.
+   * Else start smart config in 20 seconds.
+   * After that, if device is connected to the Internet, that good, save WiFi config info to SD card.
+   * Else no connection is made. Device will continue collecting data and keep trying reconect like 
+   * the brief above
+   */
+  //Start WiFi mode by Station
+  wifi_manager.setMode(WIFI_MODE_STA);
+  if(device_manager->getConnectionStatus().sd_card)
+  {
+    user_interface.display.showSDsymbol();
+    user_interface.led_signal.setGreenLED();
+    if(device_manager->g_store.isFileEmpty(WIFI_INFO_FILE))
+    {
+      wifi_manager.connect();
+    }
+    else
+    {   
+      wifi_manager.getWiFiListFromStore();
+      wifi_manager.connectBestWiFi();
+    }
+  }
+  else
+  {
+    user_interface.display.showNonSDsymbol();
+    user_interface.led_signal.setRedLED();
+    wifi_manager.connect();
+  }
+  //check if WiFi is connected
+  if(wifi_manager.isConnected() && wifi_manager.isIntenetConnected())
+  {
+    user_interface.display.showWiFiSymbol();
+    if(device_manager->g_store.isFileEmpty(WIFI_INFO_FILE))
+    {
+      device_manager->g_store.logWiFiInfo(WiFi.SSID(), WiFi.psk(), WIFI_INFO_FILE);
+      // device_manager->g_store.logWiFiInfo(WiFi.SSID(), WiFi.psk(), PREVIOUS_WIFI_FILE);
+    }
+  }
+  else
+  {
+    user_interface.display.showWiFiConfigSymbol();
+    //turn on smart config
+    wifi_manager.smartConfig();
+    if(wifi_manager.isConnected())
+    {
+      user_interface.display.showWiFiSymbol();
+    }
+    else
+    {
+      user_interface.display.showNonWiFiSymbol();
+    }
+  }
+  //update time either WiFi connection Exists or not
+  wifi_manager.updateTime();
+  mqtt.init();
+  mqtt.connect();
+  //if device can't reach mqtt station, show green non wifi symbol
+  if(!mqtt.isConnected())
+  {
+    user_interface.display.showWiFiButNoInternetSymbol();
+  }
+  last_switch_state = millis();
+  state = STATE1;
+  device_manager->initWDT();
+}
+void loop() 
+{
+  /**
+   * This is the state machine include 2 state wait and get data.
+   * In state one, device collect data then let sensors sleep to save energy.
+   * Then data will be display and increase data count by one.
+   * If data count equal to three (three data has been collected) the device will log data to SD card 
+   * and queue it for publish to mqtt server.
+   * In state zero, device wake the sensors up for state one to get data.
+   * Interval between two state is store in config class
+   */
+  if( millis() > (last_switch_state + config->getTimeStamp()))
+  {
+    if(state == STATE1)
+    {
+      #ifdef _DB_LOG_
+        Serial.println("State 1");
+      #endif
+      device_manager->updateDataCore();
+      device_manager->sleep();
+      device_manager->printData();
+      user_interface.display.updateData();
+      data_count++;
+      if(data_count == 3)
+      {
+        data_count = 0;
+        if(device_manager->isSDcardConnected())
+        {
+          user_interface.display.showSDsymbol();
+          user_interface.led_signal.setGreenLED();
+          user_interface.led_signal.resetRedLED();
+          device_manager->logDataCoreToSDCard();
+        }
+        else
+        {
+          user_interface.display.showNonSDsymbol();
+          user_interface.led_signal.resetGreenLED();
+          user_interface.led_signal.setRedLED();
+        }
+        if(queue->isFull())
+        {
+          Serial.println("Queue is full!");
+        }
+        else
+        {
+          queue->enQueue(device_manager->getDataCore());
+        }
+      }
+      state = STATE0;
+    }
+    else if(state == STATE0)
+    {
+      #ifdef _DB_LOG_
+        Serial.println("State 0");
+      #endif
+      //wake up for next update data
+      device_manager->wake();
+      state = STATE1;
+    }
+    else if(state == STATE2)
+    {
+      #ifdef _DB_LOG_
+        Serial.println("State 2");
+      #endif
+    }
+    last_switch_state = millis();
+  }
+  /**
+   * Check RTC alar, every 0.5 second to update time in main screen
+   */
+  if(millis() >(last_update_from_rtc + 500))
+  {
+    if(device_manager->checkAlarm2())
+    {
+      //get time and update to the display screen
+      device_manager->updateTimeFromRTC();
+      user_interface.display.updateClock(device_manager->getTime().hour, device_manager->getTime().minute);
+      device_manager->clearAlarm2();
+      mqtt.keepConnection();
+    }
+    last_update_from_rtc = millis();
+  }
+  /**
+   * Check data in queue.
+   * If there is data in queue, check mqtt connection
+   *      if mqtt is connected, dequeue and publish
+   *            if publish failed, enqueue data again
+   *      else check if 
+   */
+  if(millis() > (last_check_queue + 1000))
+  {
+    //check queue and then publish
+    if(!queue->isEmpty())
+    {  
+      if(mqtt.isConnected())
+      {
+        //get data from queue to publish
+        user_interface.display.showWiFiSymbol();
+        DataCore data_to_publish = queue->deQueue();
+        mqtt.encryptJSON(data_to_publish, device_manager->getMAC());
+        if(mqtt.publish(true))
+        {
+          user_interface.led_signal.blinkLedBlue(5, 100);
+          Serial.println("published successfully!");
+        }
+        else 
+        {
+          Serial.println("published failed!");
+          //if publish fail, push data back to queue for the next publish
+          queue->enQueue(data_to_publish);
+        }
+      }
+      else if(wifi_manager.isConnected() && wifi_manager.isIntenetConnected())
+      {
+        #ifdef _DB_LOG_
+          Serial.println("Reconnect mqtt");
+        #endif
+        user_interface.display.showWiFiButNoInternetSymbol();
+        mqtt.reconnect();
+      }
+      else if(millis() > (last_reconnect_wifi + time_to_reconnect_wifi))
+      {
+        if(device_manager->isSDcardConnected() && !(device_manager->g_store.isFileEmpty(WIFI_INFO_FILE)))
+        {
+          wifi_manager.connectBestWiFi();
+        }
+        else
+        {
+          wifi_manager.reconnect();
+        }
+        last_reconnect_wifi = millis();
+        /**
+         * WiFi reconnect function requires 5 seconds, wait that and then check the 
+         * connection. If there is a connection, reset the time to reconnect else 
+         * double reconnect time to max 32 minutes.
+         */
+        if(wifi_manager.isConnected())
+        {
+          time_to_reconnect_wifi = TIME_TO_RECONNECT_WIFI_DEFAULT;
+        }
+        else if(time_to_reconnect_wifi < TIME_TO_RECONNECT_WIFI_MAX)
+        {
+          time_to_reconnect_wifi *= 2;
+        }
+        else 
+        {
+          time_to_reconnect_wifi = TIME_TO_RECONNECT_WIFI_MAX;
+        }  
+      }
+      else
+      {
+        user_interface.display.showNonWiFiSymbol();
+      }
+    }
+    last_check_queue = millis();
+  }
+  //check for update firmware
+  // if(device_manager->getTime().hour == 23 && (millis() > (last_check_update_ota + 300000)))
+  if((millis() > (last_check_update_ota + 120000)))
+  {
+    wifi_manager.updateOTA();
+    last_check_update_ota = millis();
+  }
+  /**
+   * Watchdog timer things
+   */
+  
+  /**
+   * This makes the device restart every 30 days
+   */
+  if(millis() > RESET_PERIOD)
+  {
+    ESP.restart();
+  }    
+    /**
+   * Smartconfig thing
+   */
+  if(user_interface.user_input.getButtonStatus(1).currentState == BUTTON_HELD)
+  {
+    user_interface.display.showWiFiConfigSymbol();
+    user_interface.led_signal.setBlueLED();
+    wifi_manager.smartConfig();
+    user_interface.led_signal.resetBlueLED();
+    user_interface.display.showWiFiSymbol();
+    mqtt.connect();
+  }
+  user_interface.user_input.buttonScan();
+  device_manager->resetWDT();
+}

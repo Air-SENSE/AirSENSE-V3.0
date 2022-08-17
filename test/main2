@@ -1,0 +1,169 @@
+#include <Arduino.h>
+#include "DeviceManager.h"
+#include "MQTTConnection.h"
+#include "WiFiConnectionManager.h"
+#include "StatusManager.h"
+#include "UserInterfaceManager.h"
+#include "Queue.h"
+#include "MemoryManager.h"
+
+#define _DB_LOG_
+#define UPDATE_DATA_PERIOD 10000
+#define UPDATE_DISPLAY_PERIOD 5000
+
+UserInterfaceManager user_interface;
+DeviceManager *device_manager;
+// MemoryManager *memory;
+Queue *queue;
+MQTTConnection mqtt;
+WiFiConnectionManager wifi_manager;
+
+//static tick
+static unsigned long last_update_data_time = 0;
+static unsigned long last_reconnect_mqtt = 0;
+static unsigned long last_check_update_ota= 0;
+static unsigned long last_update_display_time = 0;
+static unsigned long last_reconnect_wifi = 0;
+static unsigned long last_check_alarm = 0;
+
+// static unsigned long last_update_display_time = 0;
+
+void setup() {   
+  //start
+  device_manager = DeviceManager::getInstance();
+  queue = Queue::getInstance();
+
+  //initialize hardware
+  device_manager->initHardware();
+  //set watchdog timer
+  /////
+
+  //initialize user interface
+  user_interface.init();
+  user_interface.show(PROGRESS_SCREEN);
+
+  //check connected device_manager
+  device_manager->checkConnectedDevices();
+  //initialize connected devices
+  device_manager->initConnectedDevices();
+  delay(2000);
+
+  user_interface.show(MAIN_SCREEN);
+
+  if(device_manager->getConnectionStatus().sd_card)
+  {
+    user_interface.display.showSDsymbol();
+    user_interface.led_signal.setGreenLED();
+    wifi_manager.getWiFiListFromStore();
+    wifi_manager.connectBestWiFi();
+  }
+  else
+  {
+    user_interface.display.showNonSDsymbol();
+    user_interface.led_signal.setRedLED();
+    wifi_manager.connect();
+  }
+
+  if(wifi_manager.isConnected())
+  {
+    #ifdef _DB_LOG_
+      Serial.println("WiFi is connected!");
+    #endif
+    user_interface.display.showWiFiSymbol();
+    wifi_manager.updateTime();
+    mqtt.init();
+    mqtt.connect();
+  }
+  else
+  {
+    #ifdef _DB_LOG_
+      Serial.println("No WiFi connection!");
+    #endif
+    user_interface.display.showNonWiFiSymbol();
+  }
+  // user_interface.show(MAIN_SCREEN);
+  user_interface.display.mainScreen();
+  last_update_data_time = millis();
+}
+void loop() {
+  //update date from devices
+  if(device_manager->checkAlarm1())
+  {
+    #ifdef _DB_LOG_
+      Serial.println("Alarm1");
+    #endif
+    device_manager->updateDataCore();
+    ////////////sleep
+    device_manager->clearAlarm1();
+    device_manager->printData();
+    if(device_manager->isSDcardConnected())
+    {
+      user_interface.display.showSDsymbol();
+      device_manager->logDataCoreToSDCard();
+    }
+    else
+    {
+      user_interface.display.showNonWiFiSymbol();
+    }
+    last_update_data_time = millis(); 
+    user_interface.display.updateData();
+    if(queue->isFull())
+    {
+      Serial.print("Queue is full!");
+    }
+    else
+    {
+      queue->enQueue(device_manager->getDataCore());
+    }
+  }
+  else if(device_manager->checkAlarm2())
+  {
+    #ifdef _DB_LOG_
+      Serial.println("Alarm2");
+    #endif
+    user_interface.display.updateClock();
+    /////////////wake
+    device_manager->clearAlarm2();
+  }
+  
+  //check queue and then publish
+ 
+  if(mqtt.isConnected())
+  {  
+    if(!queue->isEmpty())
+    {
+      mqtt.encryptJSON(queue->deQueue(), device_manager->getMAC());
+      if(mqtt.publish(true))
+      {
+        Serial.print("published successfully!");
+      }
+      else 
+      {
+        Serial.print("published failed!");
+      }
+    }
+  }
+  else
+  {
+    if(wifi_manager.isConnected())
+    {
+      #ifdef _DB_LOG_
+        Serial.println("Reconnect mqtt");
+      #endif
+      mqtt.reconnect();
+    }
+    else
+    {
+      #ifdef _DB_LOG_
+        Serial.println("Reconnect WiFi");
+      #endif
+      wifi_manager.reconnect();
+    }
+  }
+  delay(2000);
+  #ifdef _DB_LOG_
+        Serial.println("hihi");
+  #endif
+  //feed the dog
+
+}

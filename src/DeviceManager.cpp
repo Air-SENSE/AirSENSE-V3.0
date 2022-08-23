@@ -26,8 +26,9 @@ void DeviceManager::switchState(uint8_t _next_state)
 void DeviceManager::initHardware()
 {
     Serial.begin(SERIAL_DEBUG_BAUDRATE);
+#ifdef PMS7003_SENSOR
     Serial1.begin(PMS7003_BAUD_RATE, SERIAL_8N1, PIN_RX_PMS7003, PIN_TX_PMS7003);
-
+#endif
     pinMode(PIN_NUM_MOSI, INPUT_PULLUP);
     SPI.begin(PIN_NUM_CLK, PIN_NUM_MISO, PIN_NUM_MOSI, PIN_CS_SD_CARD);
     Wire.begin(PIN_SDA_GPIO, PIN_SCL_GPIO, I2C_CLOCK_SPEED);
@@ -89,7 +90,7 @@ void DeviceManager::checkConnectedDevices()
         #endif
     }
         
-
+#ifdef PMS7003_SENSOR
     if(g_pms7003.isConnected())
     {
         this->connected_devices_status.pms7003 = DEVICE_CONNECTED;
@@ -104,6 +105,7 @@ void DeviceManager::checkConnectedDevices()
             ESP_LOGE(DEVICETAG, "PMS7003 no found!");
         #endif
     }
+#endif
 }
 
 bool DeviceManager::checkI2CDevices(uint8_t _i2c_address)
@@ -134,12 +136,13 @@ void DeviceManager::initConnectedDevices()
                 Serial.println("DS3231 initialized completely!");
             #endif
         }
+#ifdef PMS7003_SENSOR
     if(this->connected_devices_status.pms7003)
     {
         g_pms7003.init();
         Serial.println("PMS7003 initialized completely!");
     }
-        
+#endif
     if(this->connected_devices_status.sd_card)
         if(g_store.init())
         {
@@ -171,7 +174,7 @@ void DeviceManager::updateDataCore()
         this->data_core.humidity = g_bme280.getHumidity();
         this->data_core.pressure = g_bme280.getPressure();
     }
-
+#ifdef PMS7003_SENSOR
     if(this->connected_devices_status.pms7003)
     {
         this->g_pms7003.readData();
@@ -181,7 +184,7 @@ void DeviceManager::updateDataCore()
             this->data_core.pm2_5 = (float)g_pms7003.getPM2p5();
             this->data_core.pm10_0 = (float)g_pms7003.getPM10(); 
         }
-    }    
+    }   
     this->state.entry ++;
 
     // this is for error data check
@@ -192,6 +195,8 @@ void DeviceManager::updateDataCore()
     {
         err_data_count = 0;
     }
+#endif 
+
 
 }
 bool DeviceManager::isSDcardConnected()
@@ -235,6 +240,7 @@ void DeviceManager::setAlarm()
 }
 void DeviceManager::sleep()
 {
+#ifdef PMS7003_SENSOR
     if(this->connected_devices_status.pms7003)
     {
         this->g_pms7003.sleep();
@@ -245,16 +251,19 @@ void DeviceManager::sleep()
 
     }
     this->state.status = DEVICE_STATUS_SLEEPING;   
+#endif
 }
 void DeviceManager::wake()
 {
+#ifdef PMS7003_SENSOR
+
     if(this->connected_devices_status.pms7003)
     {
         this->g_pms7003.wakeUp();
     }
     this->state.status = DEVICE_STATUS_WORKING;
     //other sensors
-
+#endif
 }
 bool DeviceManager::checkAlarm1()
 {
@@ -299,12 +308,14 @@ void DeviceManager::printData()
 {
     // Serial.print("\nCO: ");
     // Serial.print(data_core.CO);
+#ifdef PMS7003_SENSOR
     Serial.print("\nPM1: ");
     Serial.print(data_core.pm1_0);
     Serial.print("\nPM2.5: ");
     Serial.print(data_core.pm2_5);
     Serial.print("\nPM10: ");
     Serial.print(data_core.pm10_0);
+#endif
     Serial.print("\nTemperature: ");
     Serial.print(data_core.temperature);
     Serial.print("\nHumidity: ");
@@ -377,44 +388,3 @@ bool DeviceManager::dataError()
     }
     
 }
-///state machine thing
-
-// DeviceManager * device_managers = DeviceManager::getInstance();
-// void updateDataCore()
-// {
-//     device_managers->updateDataCore();
-//     device_managers->printData();
-// }
-// void sleep()
-// {
-//     device_managers->sleep();
-//     #ifdef _DB_LOG_
-//         Serial.println("Devices sleep");
-//     #endif
-// }
-// void wakeUp()
-// {
-//     device_managers->wake();
-//     #ifdef _DB_LOG_
-//         Serial.println("Devices wake");
-//     #endif
-// }
-// void waitPeriod()
-// {   
-//     device_managers->waitPeriod();
-// }
-// void logData()
-// {
-//     #ifdef _DB_LOG_
-//         Serial.println("Devices log data");
-//     #endif
-//     device_managers->logDataCoreToSDCard();
-//     Queue * queue = Queue::getInstance();
-//     queue->enQueue(device_managers->getDataCore());
-// }
-// ///function pointer////////////
-// void (*action_function_ptr[])(void) = { &sleep, &wakeUp, &updateDataCore, &logData, &waitPeriod};
-// void checkDeviceState()
-// {
-//     action_function_ptr[device_managers->getState().currrent_state]();
-// }

@@ -239,7 +239,7 @@ void ILI9341Display::init()
     }
     tft.init();
     // tft.fillScreen(TFT_BLACK);
-    tft.setRotation(3);
+    tft.setRotation(DISPLAY_SET_ROTATION);
 #else
     lv_init();
 #if USE_LV_LOG != 0
@@ -311,6 +311,7 @@ void ILI9341Display::progressScreen(bool _sd, bool _pms7003, bool _bme280, bool 
         tft.setTextColor(TFT_RED);
         tft.println("Ds3231 is disconnected");
     }
+#ifdef PMS7003_SENSOR
     if (_pms7003)
     {
         tft.setTextColor(TFT_WHITE);
@@ -321,6 +322,7 @@ void ILI9341Display::progressScreen(bool _sd, bool _pms7003, bool _bme280, bool 
         tft.setTextColor(TFT_RED);
         tft.println("PMS7003 is disconnected");
     }
+#endif
     if (_sd)
     {
         tft.setTextColor(TFT_WHITE);
@@ -340,42 +342,21 @@ void ILI9341Display::mainScreen()
 #ifdef _LVGV_IN_USE_
     lv_gui_task();
 #else
-    // tft.fillScreen(TFT_BLACK);
-    // tft.setFreeFont(FMBO9);
-    // tft.setTextColor(TFT_GREEN, TFT_BLACK);
-    // tft.drawString("AirSENSE V3" , 5, 5, 4);
-    // tft.setTextColor(TFT_RED, TFT_BLACK);
-    // tft.drawString("AQI:" , 200, 90, 4);
-    // tft.setTextColor(TFT_MAGENTA, TFT_BLACK);
-    // tft.drawString("PM2.5: " , 5, 90, 4);
-    // tft.setTextColor(TFT_ORANGE, TFT_BLACK);
-    // tft.drawString("Temp : " , 5, 130, 4);
-    // tft.setTextColor(TFT_BLUE, TFT_BLACK);
-    // tft.drawString("Hum  : " , 5, 170, 4);
-    // tft.setTextColor(TFT_DARKGREY, TFT_BLACK);
-    // tft.drawString("Press: " , 5, 210, 4);
-    // tft.setTextColor(TFT_SKYBLUE, TFT_BLACK);
-    // tft.drawString("SPARC Lab" , 40, 30, 2);
-    // showWiFiWaitSymbol();
-    tft.setRotation(3);
+    tft.setRotation(DISPLAY_SET_ROTATION);
     tft.fillScreen(TFT_WHITE);
     drawSdJpeg("/airsense.jpg", 10, 1);
     drawSdJpeg("/sparc.jpg", 95, 3);
-    // drawSdJpeg("/sd.jpg", 225,1);
-    // drawSdJpeg("/greenwifi.jpg", 250,1);
     tft.drawLine(5, 28, 315, 28, TFT_BLACK);
 
+    drawSdJpeg("/press.jpg", 10, 120);
+    drawSdJpeg("/humidity.jpg", 10, 80);
+    drawSdJpeg("/temp.jpg", 10, 40);
+    
+#ifdef PMS7003_SENSOR
     drawSdJpeg("/pm2p5.jpg", 170, 50);
-    drawSdJpeg("/press.jpg", 220, 200);
-    drawSdJpeg("/humidity.jpg", 115, 200);
-    drawSdJpeg("/temp.jpg", 10, 200);
-
     drawSdJpeg("/goodface.jpg", 10, 50);
     drawSdJpeg("/goodaqimeter.jpg", 160, 100);
-
-    // tft.setCursor(10, 230, 2);
-    // tft.setTextColor(TFT_BLACK);
-    // tft.printf("ID: %s", );
+#endif
 #endif
 }
 void ILI9341Display::guiHandler()
@@ -409,142 +390,7 @@ void ILI9341Display::updateData(float _temp, float _humi, float _pres, float _pm
 #ifdef _LVGV_IN_USE_
     lv_gui_update_value(_temp, _humi, _pres, _pm2p5);
 #else
-    //     tft.setCursor(0, 70, 2);
-    //     tft.setTextColor(TFT_WHITE);
-    //     tft.print("ID: ");
-    //     tft.print(_mac);
-
-    //     int xpos= 90;
-    //     int ypos= 90;
-    //     //Delete old PM2.5 value
-    //     tft.fillRect(xpos, ypos, 60, 20, TFT_BLACK);
-
-    //     if (_pm2p5 <= 50){
-    //         tft.setTextColor(TFT_GREEN, TFT_BLACK);
-    //         if(_pm2p5<10){
-    //         xpos += tft.drawChar(' ', xpos, ypos , 4);
-    //         xpos += tft.drawChar(' ', xpos, ypos , 4);
-    //         xpos += tft.drawNumber(_pm2p5, xpos, ypos, 4);
-    //         }
-    //         else{
-    //             xpos += tft.drawChar(' ', xpos, ypos , 4);
-    //             xpos += tft.drawNumber(_pm2p5, xpos, ypos, 4);
-    //         }
-
-    //     }
-    //     else if(_pm2p5 <= 100){
-    //         tft.setTextColor(TFT_YELLOW, TFT_BLACK);
-    //         if(_pm2p5<100){
-    //             xpos += tft.drawChar(' ', xpos, ypos , 4);
-    //             xpos += tft.drawNumber(_pm2p5, xpos, ypos, 4);
-    //         }
-    //         else
-    //             xpos += tft.drawNumber(_pm2p5, xpos, ypos, 4);
-    //     }
-    //     else if(_pm2p5 <= 150){
-    //         tft.setTextColor(TFT_ORANGE, TFT_BLACK);
-    //         xpos += tft.drawNumber(_pm2p5, xpos, ypos, 4);
-    //     }
-    //     else if(_pm2p5 <= 200){
-    //         tft.setTextColor(TFT_RED, TFT_BLACK);
-    //         xpos += tft.drawNumber(_pm2p5, xpos, ypos, 4);
-    //     }
-    //     else if(_pm2p5 <= 300){
-    //         tft.setTextColor(TFT_VIOLET, TFT_BLACK);
-    //         xpos += tft.drawNumber(_pm2p5, xpos, ypos, 4);
-    //     }
-    //     else{
-    //         tft.setTextColor(TFT_BROWN, TFT_BLACK);
-    //         xpos += tft.drawNumber(_pm2p5, xpos, ypos, 4);
-    //     }
-    //     xpos += tft.drawChar(' ', xpos, ypos-5 , 2);
-    //     xpos += tft.drawChar('u', xpos, ypos+5 , 2);
-    //     xpos += tft.drawChar('g', xpos, ypos+5, 2);
-    //     xpos += tft.drawChar('/', xpos, ypos+5, 2);
-    //     xpos += tft.drawChar('m', xpos, ypos+5, 2);
-    //     xpos += tft.drawChar('3', xpos, ypos, 2);
-
-    //     // Temperature, Humidity and Pressure quantity display
-    //     xpos= 85;
-    //     ypos= 130;
-    //     tft.setTextColor(TFT_WHITE, TFT_BLACK );
-    //     xpos += tft.drawNumber(_temp, xpos, ypos, 4);
-    //     // tft.setCursor(xpos+7, ypos);
-    //     // tft.printf("%.1f", temp);
-    //     xpos += 4;
-    //     xpos += tft.drawChar(' ', xpos, ypos-5 , 2);
-    //     xpos += tft.drawChar('o', xpos, ypos , 2);
-    //     xpos += tft.drawChar('C', xpos, ypos+5, 2);
-
-    //     xpos= 85;
-    //     ypos= 170;
-    //     tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    //     xpos += tft.drawNumber(_humi, xpos , ypos, 4);
-    //     xpos += tft.drawChar(' ', xpos, ypos , 2);
-    //     xpos += tft.drawChar('%', xpos, ypos+5  , 2);
-
-    //     xpos= 85;
-    //     ypos= 210;
-    //     tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    //     xpos += tft.drawNumber(_pres, xpos , ypos, 4);
-    //     xpos += tft.drawChar(' ', xpos, ypos , 2);
-    //     xpos += tft.drawChar('P', xpos, ypos+5, 2);
-    //     xpos += tft.drawChar('a', xpos, ypos+5, 2);
-
-    //     // AQI display
-    //     xpos= 255;
-    //     ypos= 90;
-    //     tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    //     xpos += tft.drawNumber(100, xpos, ypos, 4);
-
-    // // AQI emotion face
-    //     tft.setTextDatum(TL_DATUM);
-    //     if(_pm2p5 <=50.0){
-    //         //tft.drawBitmap(210, 120, Green_Face, Green_face_Width, Green_face_Height , TFT_GREEN);
-    //         tft.fillCircle(240, 160, 40, TFT_GREEN);
-    //         tft.fillCircle(255, 145, 5, TFT_BLACK);
-    //         tft.fillCircle(225, 145, 5, TFT_BLACK);
-    //         tft.fillCircle(240, 170, 18, TFT_WHITE);
-    //         tft.fillRect(220, 150, 50, 25, TFT_GREEN);
-    //     }
-    //     else if(_pm2p5<=100.0){
-    //         tft.fillCircle(240, 160, 40, TFT_YELLOW);
-    //         tft.drawLine(245, 145, 260,145, TFT_BLACK);
-    //         tft.drawLine(215, 145, 230,145, TFT_BLACK);
-    //         tft.fillCircle(240, 170, 18, TFT_WHITE);
-    //         tft.fillRect(220, 150, 50, 25, TFT_YELLOW);
-
-    //     }
-    //         //tft.drawBitmap(220, 120, Yellow_Face, Yellow_Face_Width, Yellow_Face_Height, TFT_YELLOW);
-    //     else if(_pm2p5<=150.0){
-    //         tft.fillCircle(240, 160, 40, TFT_ORANGE);
-    //         tft.drawLine(245, 145, 260,145, TFT_BLACK);
-    //         tft.drawLine(215, 145, 230,145, TFT_BLACK);
-    //         tft.drawLine(230, 170, 250, 170, TFT_BLACK);
-    //     }
-
-    //     //  tft.drawBitmap(220, 120, Orange_Face, Orange_Face_Width, Orange_Face_Height, TFT_ORANGE );
-    //     else if(_pm2p5<=200.0){
-    //         tft.fillCircle(240, 160, 40, TFT_ORANGE);
-    //         tft.fillCircle(255, 145, 5, TFT_BLACK);
-    //         tft.fillCircle(225, 145, 5, TFT_BLACK);
-    //         tft.drawLine(220, 155, 240, 155, TFT_BLACK);
-    //     }
-    //     // tft.drawBitmap(220, 120, Red_Face, Red_Face_Width, Red_Face_Height, TFT_RED);
-    //     else if(_pm2p5 <=300.0){
-    //         tft.fillCircle(240, 160, 40, TFT_PURPLE);
-    //         tft.fillCircle(255, 145, 5, TFT_BLACK);
-    //         tft.fillCircle(225, 145, 5, TFT_BLACK);
-    //         tft.fillCircle(240, 170, 20, TFT_WHITE);
-    //     }
-    //         //tft.drawBitmap(220, 120, Purple_Face, Purple_Face_Width, Purple_Face_Height, TFT_PURPLE);
-    //     else{
-    //         tft.fillCircle(240, 160, 40, TFT_BLUE);
-    //         tft.drawLine(245, 145, 260,145, TFT_BLACK);
-    //         tft.drawLine(215, 145, 230,145, TFT_BLACK);
-    //         tft.fillCircle(240, 170, 20, TFT_WHITE);
-    //     }
-
+#ifdef PMS7003_SENSOR
     //PM2.5
     tft.setCursor(215, 60, 4);
     tft.setTextColor(TFT_BLACK);
@@ -586,29 +432,29 @@ void ILI9341Display::updateData(float _temp, float _humi, float _pres, float _pm
         drawSdJpeg("/extremlybadface.jpg", 10, 50);
         drawSdJpeg("/extremlybadaqimeter.jpg", 160, 100);
     }
-
+#endif
     //Temperature
-    tft.fillRect(30, 200, 50, 20, TFT_WHITE);
-    tft.setCursor(30, 200, 4);
+    tft.fillRect(35, 40, 50, 20, TFT_WHITE);
+    tft.setCursor(35, 40, 4);
     tft.printf("%.1f", _temp);
-    tft.setCursor(80, 201, 2);
+    tft.setCursor(85, 41, 2);
     tft.print("o");
     tft.setCursor(tft.getCursorX(), tft.getCursorY() + 5, 2);
     tft.print("C");
 
     //Humidity
-    tft.fillRect(145, 200, 50, 20, TFT_WHITE);
-    tft.setCursor(145, 200, 4);
+    tft.fillRect(35, 80, 50, 20, TFT_WHITE);
+    tft.setCursor(35, 80, 4);
     tft.printf("%.1f", _humi);
-    tft.setCursor(195, 206, 2);
+    tft.setCursor(85, 80, 2);
     tft.print("%");
 
     //Pressure
-    tft.fillRect(242, 200, 50, 20, TFT_WHITE);
-    tft.setCursor(242, 200, 4);
-    tft.printf("%.1f", _pres / 101325.0);
-    tft.setCursor(280, 206, 2);
-    tft.print("atm");
+    tft.fillRect(35, 120, 140, 20, TFT_WHITE);
+    tft.setCursor(35, 120, 4);
+    tft.printf("%.1f", _pres );/// 101325.0);
+    tft.setCursor(145, 120, 2);
+    tft.print("Pa");
 
     tft.setCursor(190, 225, 2);
     tft.setTextColor(TFT_BLACK);
@@ -625,19 +471,6 @@ void ILI9341Display::updateClock(uint8_t _hour, uint8_t _min)
 #ifdef _LVGV_IN_USE_
     lv_gui_update_time(_hour, _min);
 #else
-    // uint8_t xpos = 255;
-    // uint8_t ypos = 23; // Top left corner ot clock text, about half way down
-    // tft.setCursor(xpos, ypos, 4);
-    // tft.fillRect(xpos, 0, 60, 30, TFT_BLACK);
-    // tft.setCursor(xpos, ypos, 4);
-    // if(_hour < 10)
-    //     tft.print(0);
-    // tft.print(_hour);
-    // tft.print(":");
-
-    // if(_min < 10)
-    //     tft.print(0);
-    // tft.print(_min);
 
     tft.fillRect(280, 8, 40, 20, TFT_WHITE);
     tft.setCursor(280, 8, 2);
@@ -687,44 +520,30 @@ void ILI9341Display::showWiFiButNoInternetSymbol()
 #else
 void ILI9341Display::showSDsymbol()
 {
-    // tft.fillRect(230,0, SD_Width, SD_Height, TFT_BLACK);
-    // tft.drawXBitmap(230, 0, SD_logo, SD_Width, SD_Height, TFT_GREEN);
     drawSdJpeg("/sd.jpg", 225, 1);
 }
 void ILI9341Display::showNonSDsymbol()
 {
-    // tft.fillRect(230, 0, noSD_Width, noSD_Height, TFT_BLACK);
-    // tft.drawXBitmap(230, 0, noSD_logo, noSD_Width, noSD_Height, TFT_RED);
     drawSdJpeg("/nosd.jpg", 225, 1);
 }
 void ILI9341Display::showWiFiSymbol()
 {
-    // tft.fillRect(205, 5, Wifi_Height, Wifi_Width, TFT_BLACK);
-    // tft.drawXBitmap(205, 5, logo_Wifi, Wifi_Width, Wifi_Height, TFT_GREEN);
     drawSdJpeg("/greenwifi.jpg", 250, 1);
 }
 void ILI9341Display::showWiFiWaitSymbol()
 {
-    // tft.fillRect(205, 5, Wifi_Height, Wifi_Width, TFT_BLACK);
-    // tft.drawXBitmap(205, 5, logo_Wifi, Wifi_Width, Wifi_Height, TFT_WHITE);
     drawSdJpeg("/nowifi.jpg", 250, 1);
 }
 void ILI9341Display::showNonWiFiSymbol()
 {
-    // tft.fillRect(205, 5, noWifi_Width, noWifi_Width, TFT_BLACK);
-    // tft.drawXBitmap(205, 5, logo_noWifi, noWifi_Width, noWifi_Height, TFT_RED);
     drawSdJpeg("/redwifi.jpg", 250, 1);
 }
 void ILI9341Display::showWiFiConfigSymbol()
 {
-    // tft.fillRect(205, 5, noWifi_Width, noWifi_Width, TFT_BLACK);
-    // tft.drawXBitmap(205, 5, logo_noWifi, noWifi_Width, noWifi_Height, TFT_YELLOW);
     drawSdJpeg("/orangewifi.jpg", 250, 1);
 }
 void ILI9341Display::showWiFiButNoInternetSymbol()
 {
-    // tft.fillRect(205, 5, noWifi_Width, noWifi_Width, TFT_BLACK);
-    // tft.drawXBitmap(205, 5, logo_noWifi, noWifi_Width, noWifi_Height, TFT_GREEN);
     drawSdJpeg("/wifinointernet.jpg", 250, 1);
 }
 #endif

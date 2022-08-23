@@ -326,7 +326,7 @@ void loop()
   #ifdef MQTT_PUSH
   checkmqttstate();
   #endif
-  if(millis() > last_update_screen + 15000)
+  if(millis() > last_update_screen + TIME_INTERVAL_SYSTEM)
   {
     last_update_screen = millis();
     user_interface.display.updateData(device_manager->getDataCore().temperature, device_manager->getDataCore().humidity, device_manager->getDataCore().pressure, device_manager->getDataCore().pm2_5, device_manager->getMAC());

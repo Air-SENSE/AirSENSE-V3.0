@@ -12,12 +12,16 @@
 
 #include <Arduino.h>
 
+#define DISPLAY_SET_ROTATION 1
+#define TIME_INTERVAL_SYSTEM 1500
 //#define MQTT_PUSH
-#define THINGSPEAK_PUSH
+// #define THINGSPEAK_PUSH
+
 
 #define SERIAL_DEBUG_BAUDRATE 115200
 #define PIN_TX_PMS7003  17
 #define PIN_RX_PMS7003  16
+// #define PMS7003_SENSOR
 // #define PORT_UART_PMS7003 Serial2
 
 #define PIN_TX_SDS011 9

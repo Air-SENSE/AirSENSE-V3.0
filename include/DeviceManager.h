@@ -119,10 +119,3 @@ public:
         return instance;
     }
 };
-
-// void updateDataCore();
-// void sleep();
-// void wakeUp();
-// void waitPeriod();
-// void logData();
-// void checkDeviceState();

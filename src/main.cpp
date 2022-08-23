@@ -282,7 +282,8 @@ void setup() {
   user_interface.display.progressScreen(device_manager->getConnectionStatus().sd_card,
                                         device_manager->getConnectionStatus().pms7003, 
                                         device_manager->getConnectionStatus().bme280,
-                                        device_manager->getConnectionStatus().ds3231);
+                                        device_manager->getConnectionStatus().ds3231,
+                                        device_manager->getConnectionStatus().sht85);
   delay(3000);
 
   //Show main screen including data that just collected and clock.

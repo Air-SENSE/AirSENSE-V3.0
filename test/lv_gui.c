@@ -288,16 +288,16 @@ void lv_gui_full_screen()
 void lv_gui_update_value(float _temp, float _humi, float _pres, float _pm2p5)
 {
     char data[10];
-    sprintf(data, "%.2f ug/m3", _pm2p5);
+    sprintf(data, "%.1f ug/m3", _pm2p5);
     lv_label_set_text(lb_pm2p5, &data[0]);
     
-    sprintf(data, "%.2f *C", _temp);
+    sprintf(data, "%.1f *C", _temp);
     lv_label_set_text(lb_temp, &data[0]);
 
-    sprintf(data, "%.2f %%", _humi);
+    sprintf(data, "%.1f %%", _humi);
     lv_label_set_text(lb_humi, &data[0]);
 
-    sprintf(data, "%.2f atm", _pres);
+    sprintf(data, "%.1f atm", _pres);
     lv_label_set_text(lb_press, &data[0]);
 }
 /**********************

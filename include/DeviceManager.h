@@ -8,6 +8,7 @@
 
 #include "SensorBME280.h"
 #include "SensorPMS7003.h"
+#include "SensorSHT85.h"
 #include "DS3231_RTC.h"
 #include "UserInput.h"
 #include "LedSignal.h"
@@ -40,7 +41,7 @@ struct ConnectedDevicesStatus
     uint8_t ili9341;
     uint8_t sds011;
     uint8_t sd_card;
-    // uint8_t sht85;
+    uint8_t sht85;
 };
 class DeviceManager
 {
@@ -74,6 +75,7 @@ private:
 public:
     SensorBME280 g_bme280;
     SensorPMS7003 g_pms7003;
+    SensorSHT85 g_sht85;
     DS3231_RTC g_ds3231;
     Store g_store;
 
@@ -119,3 +121,10 @@ public:
         return instance;
     }
 };
+
+// void updateDataCore();
+// void sleep();
+// void wakeUp();
+// void waitPeriod();
+// void logData();
+// void checkDeviceState();

@@ -30,7 +30,7 @@ private:
     // DataCore data = DeviceManager::getDataCore();
 public:
     void init();
-    void progressScreen(bool _sd = false, bool _pms7003 = false, bool _bme280 = false, bool _ds3231 = false, bool _sds011 = false, bool _htu21d = false);
+    void progressScreen(bool _sd = false, bool _pms7003 = false, bool _bme280 = false, bool _ds3231 = false, bool _sds011 = false, bool _htu21d = false, bool _sht85 = false);
     void guiHandler();
     void mainScreen();
     void showScreen();

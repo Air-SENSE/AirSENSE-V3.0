@@ -277,7 +277,7 @@ void ILI9341Display::init()
     // lv_gui_task();
 }
 
-void ILI9341Display::progressScreen(bool _sd, bool _pms7003, bool _bme280, bool _ds3231, bool _sds011, bool _htu21d)
+void ILI9341Display::progressScreen(bool _sd, bool _pms7003, bool _bme280, bool _ds3231, bool _sds011, bool _htu21d, bool _sht85)
 {
 #ifdef _DB_LOG_
     Serial.println("Progess screen");
@@ -300,6 +300,16 @@ void ILI9341Display::progressScreen(bool _sd, bool _pms7003, bool _bme280, bool 
     {
         tft.setTextColor(TFT_RED);
         tft.println("BME280 is disconnected");
+    }
+    if (_sht85)
+    {
+        tft.setTextColor(TFT_WHITE);
+        tft.println("SHT85 is connected");
+    }
+    else
+    {
+        tft.setTextColor(TFT_RED);
+        tft.println("SHT85 is disconnected");
     }
     if (_ds3231)
     {
